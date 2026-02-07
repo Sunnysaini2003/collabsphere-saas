@@ -1,3 +1,6 @@
+const http = require('http');
+const { Server } = require('socket.io');
+
 const app = require('./app');
 const connectMongo = require('./config/mongo');
 const pool = require('./config/mysql');
@@ -12,11 +15,20 @@ const PORT = process.env.PORT || 5000;
 
     await connectMongo();
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+    const server = http.createServer(app);
+
+    const io = new Server(server, {
+      cors: { origin: "*" }
     });
+
+    require('./sockets')(io);
+
+    server.listen(PORT, () => {
+      console.log(`Server running on ${PORT}`);
+    });
+
   } catch (err) {
-    console.error('Startup Error:', err);
-    process.exit(1);
+    console.error(err);
   }
 })();
+
