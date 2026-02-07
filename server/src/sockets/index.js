@@ -1,3 +1,5 @@
+const Chat = require('../modules/chat/chat.model');
+
 module.exports = (io) => {
 
   io.on('connection', (socket) => {
@@ -8,31 +10,8 @@ module.exports = (io) => {
       socket.join(`project_${projectId}`);
     });
 
-    // send message
-    socket.on('send_message', (data) => {
-      io.to(`project_${data.projectId}`).emit('receive_message', data);
-    });
-
-    socket.on('disconnect', () => {
-      console.log('User disconnected');
-    });
-  });
-
-};
-git add .
-const Chat = require('../modules/chat/chat.model');
-
-module.exports = (io) => {
-
-  io.on('connection', (socket) => {
-
-    socket.on('join_project', (projectId) => {
-      socket.join(`project_${projectId}`);
-    });
-
+    // 🔴 chat system
     socket.on('send_message', async (data) => {
-
-      // save to MongoDB
       await Chat.create({
         projectId: data.projectId,
         sender: data.sender,
@@ -42,6 +21,14 @@ module.exports = (io) => {
       io.to(`project_${data.projectId}`).emit('receive_message', data);
     });
 
+    // 🔴 LIVE TASK UPDATE
+    socket.on('task_updated', (data) => {
+      io.to(`project_${data.projectId}`).emit('task_updated', data);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('User disconnected');
+    });
   });
 
 };

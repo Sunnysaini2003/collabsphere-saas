@@ -45,13 +45,19 @@ exports.updateTaskStatus = async (req, res) => {
     const orgId = req.orgId;
 
     await pool.query(
-      `UPDATE tasks
-       SET status = ?
-       WHERE id = ? AND org_id = ?`,
+      `UPDATE tasks SET status=? WHERE id=? AND org_id=?`,
       [status, taskId, orgId]
     );
 
-    res.json({ message: 'Task updated' });
+    // 🔴 emit real-time update
+    const io = req.app.get('io');
+    io.to(`project_${req.body.project_id}`).emit('task_updated', {
+      taskId,
+      status
+    });
+
+    res.json({ message: 'Task updated live' });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Update failed' });

@@ -6,6 +6,11 @@ const connectMongo = require('./config/mongo');
 const pool = require('./config/mysql');
 require('./config/redis');
 
+app.set('io', io);
+const io = new Server(server, { cors: { origin: "*" } });
+app.set('io', io);
+require('./sockets')(io);
+
 const PORT = process.env.PORT || 5000;
 
 (async () => {
