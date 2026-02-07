@@ -18,4 +18,4 @@ Redis
 JWT Authentication  
 
 ## Author
-Sunny Saini – Full Stack Developer
+Sunny Saini – Full Stack Developer 
