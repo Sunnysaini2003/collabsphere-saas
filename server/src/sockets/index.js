@@ -25,6 +25,10 @@ module.exports = (io) => {
     socket.on('task_updated', (data) => {
       io.to(`project_${data.projectId}`).emit('task_updated', data);
     });
+// user personal notification room
+    socket.on('join_user', (userId) => {
+  socket.join(`user_${userId}`);
+});
 
     socket.on('disconnect', () => {
       console.log('User disconnected');

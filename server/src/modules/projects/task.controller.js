@@ -1,4 +1,5 @@
 const pool = require('../../config/mysql');
+const { createNotification } = require('../../utils/notify');
 
 exports.createTask = async (req, res) => {
   try {
@@ -63,3 +64,22 @@ exports.updateTaskStatus = async (req, res) => {
     res.status(500).json({ message: 'Update failed' });
   }
 };
+
+const [taskRows] = await pool.query(
+  'SELECT assigned_to, title FROM tasks WHERE id=?',
+  [taskId]
+);
+
+if (taskRows.length) {
+  const assignedUser = taskRows[0].assigned_to;
+  const taskTitle = taskRows[0].title;
+
+  await createNotification(
+    assignedUser,
+    orgId,
+    `Task "${taskTitle}" status updated to ${status}`
+  );
+}
+io.to(`user_${assignedUser}`).emit('new_notification', {
+  message: `Task "${taskTitle}" updated to ${status}`
+});
