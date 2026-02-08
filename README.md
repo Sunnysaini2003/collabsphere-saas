@@ -18,8 +18,4 @@ Redis
 JWT Authentication  
 
 ## Author
-<<<<<<< HEAD
 Sunny Saini – Full Stack Developer 
-=======
-Sunny Saini – Full Stack Developer
->>>>>>> 2d8c23cd34ac1dda9f11d2d8c4a60de7a6362a01
