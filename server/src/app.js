@@ -7,6 +7,9 @@ const authRoutes = require('./routes/auth.routes');
 const orgRoutes = require('./routes/org.routes');
 const projectRoutes = require('./routes/project.routes');
 const taskRoutes = require('./routes/task.routes');
+const notificationRoutes = require('./routes/notification.routes');
+app.use('/api/notifications', notificationRoutes);
+
 
 
 
