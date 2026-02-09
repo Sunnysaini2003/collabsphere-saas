@@ -65,21 +65,62 @@ exports.updateTaskStatus = async (req, res) => {
   }
 };
 
-const [taskRows] = await pool.query(
-  'SELECT assigned_to, title FROM tasks WHERE id=?',
-  [taskId]
-);
+exports.updateTaskStatus = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { status, project_id } = req.body || {};
 
-if (taskRows.length) {
-  const assignedUser = taskRows[0].assigned_to;
-  const taskTitle = taskRows[0].title;
-
-  await createNotification(
-    assignedUser,
-    orgId,
-    `Task "${taskTitle}" status updated to ${status}`
-  );
+if (!status) {
+  return res.status(400).json({ message: 'Status is required' });
 }
-io.to(`user_${assignedUser}`).emit('new_notification', {
-  message: `Task "${taskTitle}" updated to ${status}`
-});
+
+    const orgId = req.orgId;
+
+    await pool.query(
+      `UPDATE tasks SET status=? WHERE id=? AND org_id=?`,
+      [status, taskId, orgId]
+    );
+
+    // 🔴 get task info
+    const [taskRows] = await pool.query(
+      'SELECT assigned_to, title FROM tasks WHERE id=?',
+      [taskId]
+    );
+
+    let assignedUser = null;
+    let taskTitle = '';
+
+    if (taskRows.length) {
+      assignedUser = taskRows[0].assigned_to;
+      taskTitle = taskRows[0].title;
+
+      // save notification
+      await createNotification(
+        assignedUser,
+        orgId,
+        `Task "${taskTitle}" status updated to ${status}`
+      );
+    }
+
+    const io = req.app.get('io');
+
+    // 🔴 project real-time update
+    io.to(`project_${project_id}`).emit('task_updated', {
+      taskId,
+      status
+    });
+
+    // 🔴 user notification realtime
+    if (assignedUser) {
+      io.to(`user_${assignedUser}`).emit('new_notification', {
+        message: `Task "${taskTitle}" updated to ${status}`
+      });
+    }
+
+    res.json({ message: 'Task updated with notification & realtime' });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Update failed' });
+  }
+};

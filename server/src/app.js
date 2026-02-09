@@ -8,25 +8,17 @@ const orgRoutes = require('./routes/org.routes');
 const projectRoutes = require('./routes/project.routes');
 const taskRoutes = require('./routes/task.routes');
 const notificationRoutes = require('./routes/notification.routes');
-app.use('/api/notifications', notificationRoutes);
-
-
-
 
 const app = express();
-
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
 app.use(morgan('dev'));
-
-
 app.use('/api/auth', authRoutes);
 app.use('/api/org', orgRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
-
-
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/health', (req, res) => {
   res.json({
@@ -35,7 +27,4 @@ app.get('/health', (req, res) => {
     timestamp: new Date()
   });
 });
-
-
-
 module.exports = app;
