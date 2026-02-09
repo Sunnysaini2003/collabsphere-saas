@@ -1,6 +1,8 @@
 const pool = require('../../config/mysql');
 const { createNotification } = require('../../utils/notify');
 
+
+// 🟢 CREATE TASK
 exports.createTask = async (req, res) => {
   try {
     const { project_id, title, description, priority, assigned_to, due_date } = req.body;
@@ -14,12 +16,15 @@ exports.createTask = async (req, res) => {
     );
 
     res.json({ message: 'Task created', taskId: result.insertId });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Create task failed' });
   }
 };
 
+
+// 🟢 GET TASKS
 exports.getTasks = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -33,94 +38,99 @@ exports.getTasks = async (req, res) => {
     );
 
     res.json(rows);
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Fetch tasks failed' });
   }
 };
 
-exports.updateTaskStatus = async (req, res) => {
-  try {
-    const { taskId } = req.params;
-    const { status } = req.body;
-    const orgId = req.orgId;
 
-    await pool.query(
-      `UPDATE tasks SET status=? WHERE id=? AND org_id=?`,
-      [status, taskId, orgId]
-    );
-
-    // 🔴 emit real-time update
-    const io = req.app.get('io');
-    io.to(`project_${req.body.project_id}`).emit('task_updated', {
-      taskId,
-      status
-    });
-
-    res.json({ message: 'Task updated live' });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Update failed' });
-  }
-};
-
+// 🔴 UPDATE TASK STATUS + ADMIN + USER NOTIFICATIONS
 exports.updateTaskStatus = async (req, res) => {
   try {
     const { taskId } = req.params;
     const { status, project_id } = req.body || {};
-
-if (!status) {
-  return res.status(400).json({ message: 'Status is required' });
-}
-
     const orgId = req.orgId;
 
+    if (!status) {
+      return res.status(400).json({ message: 'Status is required' });
+    }
+
+    // 🔴 update task
     await pool.query(
       `UPDATE tasks SET status=? WHERE id=? AND org_id=?`,
       [status, taskId, orgId]
     );
 
-    // 🔴 get task info
-    const [taskRows] = await pool.query(
-      'SELECT assigned_to, title FROM tasks WHERE id=?',
-      [taskId]
-    );
+   // 🔴 get task info
+const [taskRows] = await pool.query(
+  `SELECT assigned_to, title FROM tasks WHERE id=?`,
+  [taskId]
+);
 
-    let assignedUser = null;
-    let taskTitle = '';
+let assignedUser = null;
+let taskTitle = '';
 
-    if (taskRows.length) {
-      assignedUser = taskRows[0].assigned_to;
-      taskTitle = taskRows[0].title;
+if (taskRows.length) {
+  assignedUser = taskRows[0].assigned_to;
+  taskTitle = taskRows[0].title;
+}
 
-      // save notification
-      await createNotification(
-        assignedUser,
-        orgId,
-        `Task "${taskTitle}" status updated to ${status}`
-      );
-    }
+// 🔴admin fetch
+const [admins] = await pool.query(
+  `SELECT id FROM users 
+   WHERE org_id = ? 
+   AND role IN ('OWNER','ADMIN')`,
+  [orgId]
+);
+
+// 🔴 notify assigned user
+if (assignedUser) {
+  await createNotification(
+    assignedUser,
+    orgId,
+    `Task "${taskTitle}" updated to ${status}`
+  );
+}
+
+// 🔴 notify admin also
+for (let admin of admins) {
+  await createNotification(
+    admin.id,
+    orgId,
+    `Task "${taskTitle}" updated to ${status}`
+  );
+}
 
     const io = req.app.get('io');
 
-    // 🔴 project real-time update
+    // 🔴 project realtime update
     io.to(`project_${project_id}`).emit('task_updated', {
       taskId,
       status
     });
 
-    // 🔴 user notification realtime
+    // 🔴 assigned user realtime
     if (assignedUser) {
       io.to(`user_${assignedUser}`).emit('new_notification', {
         message: `Task "${taskTitle}" updated to ${status}`
       });
     }
 
-    res.json({ message: 'Task updated with notification & realtime' });
+    // 🔴 admin realtime
+    for (let admin of admins) {
+      io.to(`user_${admin.id}`).emit('new_notification', {
+        message: `Task "${taskTitle}" updated to ${status}`
+      });
+    }
+
+    res.json({
+      message: 'Task updated with admin + user notifications'
+    });
 
   } catch (err) {
-    console.error(err);
+    console.error('Update task error:', err);
     res.status(500).json({ message: 'Update failed' });
   }
 };
