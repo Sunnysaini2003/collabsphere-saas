@@ -3,6 +3,8 @@
 const http = require('http');
 const app = require('./app');
 const pool = require('./config/mysql');
+const express = require("express");
+const cors = require("cors");
 const connectMongo = require('./config/mongo');
 require('./config/redis');
 
