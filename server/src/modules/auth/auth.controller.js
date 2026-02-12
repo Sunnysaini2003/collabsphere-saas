@@ -20,11 +20,9 @@ exports.login = async (req, res) => {
     }
 
     // 🔥 CREATE TOKEN
-  const JWT_SECRET = "collabsphere123";
-
-const token = jwt.sign(
+  const token = jwt.sign(
   { id: user.id, orgId: user.org_id },
-  JWT_SECRET,
+  process.env.JWT_SECRET,
   { expiresIn: "7d" }
 );
 
