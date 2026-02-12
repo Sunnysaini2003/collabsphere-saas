@@ -6,9 +6,10 @@ module.exports = (req, res, next) => {
   if (!header) return res.status(401).json({ message: 'No token' });
 
   try {
-    const token = header.split(' ')[1];
-    const decoded = jwt.verify(token, collabsphere123);
-    req.user = decoded;
+    const JWT_SECRET = "collabsphere123";
+const decoded = jwt.verify(token, JWT_SECRET);
+req.user = decoded;
+next();
     next();
   } catch {
     res.status(401).json({ message: 'Invalid token' });

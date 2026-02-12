@@ -20,11 +20,13 @@ exports.login = async (req, res) => {
     }
 
     // 🔥 CREATE TOKEN
-    const token = jwt.sign(
-      { id: user.id, orgId: user.org_id },
-      "collabsphere123",
-      { expiresIn: "7d" }
-    );
+  const JWT_SECRET = "collabsphere123";
+
+const token = jwt.sign(
+  { id: user.id, orgId: user.org_id },
+  JWT_SECRET,
+  { expiresIn: "7d" }
+);
 
     res.json({
       message: "Login success",
