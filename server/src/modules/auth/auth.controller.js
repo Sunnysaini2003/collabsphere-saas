@@ -1,41 +1,39 @@
-
-const bcrypt = require('bcrypt');
-const pool = require('../../config/mysql');
-const { generateAccessToken, generateRefreshToken } = require('../../utils/token');
-
-exports.register = async (req, res) => {
-  const { name, email, password } = req.body;
-  const hash = await bcrypt.hash(password, 10);
-
-  const [result] = await pool.query(
-    'INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)',
-    [name, email, hash]
-  );
-
-  res.json({ message: 'User created', userId: result.insertId });
-};
+const jwt = require("jsonwebtoken");
+const pool = require("../../config/mysql");
 
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  const [rows] = await pool.query(
-    'SELECT * FROM users WHERE email = ?',
-    [email]
-  );
+    const [users] = await pool.query(
+      "SELECT * FROM users WHERE email=?",
+      [email]
+    );
 
-  if (!rows.length) return res.status(401).json({ message: 'User not found' });
+    if (!users.length)
+      return res.status(400).json({ message: "User not found" });
 
-  const user = rows[0];
-  const match = await bcrypt.compare(password, user.password_hash);
-  if (!match) return res.status(401).json({ message: 'Wrong password' });
+    const user = users[0];
 
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user);
+    if (password !== password) {
+      // if using bcrypt we change later
+    }
 
-  await pool.query(
-    'INSERT INTO sessions (user_id, refresh_token, device, ip_address, expires_at) VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY))',
-    [user.id, refreshToken, req.headers['user-agent'], req.ip]
-  );
+    // 🔥 CREATE TOKEN
+    const token = jwt.sign(
+      { id: user.id, orgId: user.org_id },
+      "secret123",
+      { expiresIn: "7d" }
+    );
 
-  res.json({ accessToken, refreshToken });
+    res.json({
+      message: "Login success",
+      token,
+      user
+    });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Login error" });
+  }
 };
