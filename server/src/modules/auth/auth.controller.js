@@ -22,7 +22,7 @@ exports.login = async (req, res) => {
     // 🔥 CREATE TOKEN
     const token = jwt.sign(
       { id: user.id, orgId: user.org_id },
-      "secret123",
+      "collabsphere123",
       { expiresIn: "7d" }
     );
 
