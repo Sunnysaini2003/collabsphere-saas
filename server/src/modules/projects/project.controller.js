@@ -1,9 +1,16 @@
 const pool = require('../../config/mysql');
+const { getOrSetCache } = require('../../utils/cache');
 
+
+// 🔥 CREATE PROJECT
 exports.createProject = async (req, res) => {
   try {
     const { name, description } = req.body;
     const orgId = req.orgId;
+
+    if (!orgId) {
+      return res.status(403).json({ message: "No orgId found" });
+    }
 
     const [result] = await pool.query(
       `INSERT INTO projects (org_id, name, description, created_by)
@@ -11,50 +18,47 @@ exports.createProject = async (req, res) => {
       [orgId, name, description, req.user.id]
     );
 
-    res.json({ message: 'Project created', projectId: result.insertId });
+    res.json({
+      message: "Project created successfully",
+      projectId: result.insertId
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Create project failed' });
+    console.log("CREATE PROJECT ERROR:", err);
+    res.status(500).json({ message: "Create project failed" });
   }
 };
 
+
+
+// 🔥 GET PROJECTS (WITH CACHE)
 exports.getProjects = async (req, res) => {
   try {
     const orgId = req.orgId;
 
-    const [rows] = await pool.query(
-      `SELECT id, name, status, created_at
-       FROM projects
-       WHERE org_id = ? AND status = 'ACTIVE'
-       ORDER BY created_at DESC`,
-      [orgId]
-    );
+    if (!orgId) {
+      return res.status(403).json({ message: "No organization access" });
+    }
 
-    res.json(rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Fetch projects failed' });
-  }
-};
-const { getOrSetCache } = require('../../utils/cache');
-
-exports.getProjects = async (req, res) => {
-  try {
-    const cacheKey = `projects:${req.orgId}`;
+    const cacheKey = `projects:${orgId}`;
 
     const data = await getOrSetCache(cacheKey, async () => {
+
       const [rows] = await pool.query(
         `SELECT id, name, status, created_at
          FROM projects
-         WHERE org_id = ? AND status = 'ACTIVE'`,
-        [req.orgId]
+         WHERE org_id = ? AND status='ACTIVE'
+         ORDER BY created_at DESC`,
+        [orgId]
       );
+
       return rows;
     });
 
     res.json(data);
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Fetch failed' });
+    console.log("GET PROJECT ERROR:", err);
+    res.status(500).json({ message: "Fetch projects failed" });
   }
 };
