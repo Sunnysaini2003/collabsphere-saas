@@ -1,5 +1,5 @@
 const pool = require('../../config/mysql');
-const { getOrSetCache } = require('../../utils/cache');
+// const { getOrSetCache } = require('../../utils/cache');
 
 
 // 🔥 CREATE PROJECT
@@ -31,34 +31,23 @@ exports.createProject = async (req, res) => {
 
 
 
-// 🔥 GET PROJECTS (WITH CACHE)
 exports.getProjects = async (req, res) => {
   try {
     const orgId = req.orgId;
 
-    if (!orgId) {
-      return res.status(403).json({ message: "No organization access" });
-    }
+    const [rows] = await pool.query(
+      `SELECT id, name, status, created_at
+       FROM projects
+       WHERE org_id = ? 
+       ORDER BY created_at DESC`,
+      [orgId]
+    );
 
-    const cacheKey = `projects:${orgId}`;
-
-    const data = await getOrSetCache(cacheKey, async () => {
-
-      const [rows] = await pool.query(
-        `SELECT id, name, status, created_at
-         FROM projects
-         WHERE org_id = ? AND status='ACTIVE'
-         ORDER BY created_at DESC`,
-        [orgId]
-      );
-
-      return rows;
-    });
-
-    res.json(data);
+    res.json(rows);
 
   } catch (err) {
     console.log("GET PROJECT ERROR:", err);
     res.status(500).json({ message: "Fetch projects failed" });
   }
 };
+
